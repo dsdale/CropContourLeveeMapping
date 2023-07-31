@@ -1,13 +1,15 @@
 import os
 from glob import glob
 
-path_label = "/Volumes/Research/CropContour/v3"
-path_greene= "drive/My Drive/Crop Contour/Greene- Feb 2020"
-data_2013 = "drive/My Drive/Crop Contour/Lonoke_2013/Mosaic"
-path_processed = 'data' # "drive/My Drive/Crop Contour/Processed"
-path_processed_save = 'keep' # "drive/My Drive/Crop Contour/Processed"
-list_use = glob(os.path.join(path_label, '*.lif'))
-for f in list_use: print(f)
+
+#These are the paths that needs changed
+
+path_label = "/Volumes/Research/CropContour/v3"#Path to unprocessed LIF files
+path_55 = "/Users/dakota/Documents/UARK/CropContour/Code/JsonTiffMasks"#Path to the "55 Tiles". Contains both image and label as separate .tif
+
+#Intermediary directories
+path_processed = 'data'
+path_processed_save = 'keep'
 
 if not os.path.isdir(path_processed):
     os.mkdir(path_processed)
@@ -68,7 +70,6 @@ def compose_file_list(dir_img, dir_mask,suffix='.tif'):
     return filename_pairs
 
 
-
 def read_batch_imgs(dataList,width,height):
 
     img_array = np.ndarray((len(dataList),width, height, 3), np.uint8)
@@ -81,8 +82,6 @@ def read_batch_imgs(dataList,width,height):
         n_img = n_img +1
 
     return img_array,mask_array
-
-
 
 
 def adjustData(img,mask,flag_multi_class,num_class):
@@ -122,8 +121,6 @@ numPivot = 0
 numZero = 0
 numUnknown = 0
 
-#lif2tiff.py
-
 from osgeo import ogr
 from osgeo import gdal
 import json
@@ -162,7 +159,6 @@ def _decode_lif_file(srcLIFfile):
         shapes = ((s['label'],s['points'],s['line_color'],s['fill_color'])\
                   for s in data['shapes'])
     return imageData,shapes
-
 
 def PolyArea(x,y):
   return 0.5*np.abs(np.dot(x,np.roll(y,1))-np.dot(y,np.roll(x,1)))
@@ -291,10 +287,6 @@ for k in dict_color:
 arr_color = np.array(arr_color)
 
 [k for k in dict_color]
-
-dict_color
-
-
 Grayscale = True #@param {type:"boolean"}
 
 def gray(filename):
@@ -326,7 +318,6 @@ def gray(filename):
 from osgeo import gdal
 import numpy as np
 import cv2
-# from lif2tiff import *
 
 def _array_to_raster(array,dst_filename,x_size,y_size,x_pixels,y_pixels,x_min,y_max,wkt_projection,datatype):
     """Array > Raster
@@ -360,7 +351,6 @@ def _array_to_raster(array,dst_filename,x_size,y_size,x_pixels,y_pixels,x_min,y_
     dst_ds.FlushCache()  # write to disk
     dst_ds = None
     return True
-
 
 
 def spatial_subset_image(srcImgfile,outsize,dstPath,startX=0,startY=0,sBand=0):
@@ -465,7 +455,6 @@ print("Number of Contour: ",numContour)
 print("Number of Straight: ",numStraight)
 print("Number of Pivot: ",numPivot)
 print("Number of Zero: ",numZero)
-exit()
 numContour = 0
 numStraight = 0
 numPrivot = 0
@@ -596,8 +585,8 @@ ratio_shrink = 3
 width = outsize // ratio_shrink
 outsize, width
 
-Reshuffle = False #@param {type:"boolean"}
-Seed = 20 #@param {type:"slider", min:0, max:100, step:1}
+Reshuffle = False
+Seed = 20
 if Reshuffle:
   np.random.seed(Seed)
 
@@ -702,7 +691,6 @@ X_train.shape, Y_train.shape, X_val.shape, Y_val.shape, X_test.shape, Y_test.sha
 
 """## ResNet"""
 
-#%load_ext tensorboard
 
 def get_resunet(resnet=None, b_retrain=True):
     if resnet is None:
@@ -770,9 +758,6 @@ def removeFromList(list,elements):
 
 b_tpu = False 
 
-
-
-#model = tk.models.load_model('/Volumes/Research/CropContour/Code/55TilesTest/FinalModel.h5')
 def jaccard_distance_loss(y_true, y_pred, smooth=100):
     """
     Jaccard = (|X & Y|)/ (|X|+ |Y| - |X & Y|)
@@ -802,7 +787,6 @@ from os import listdir
 from shutil import copyfile
 import rasterio
 def loadToDirectory(array, dir, test=False):
-  print("In loadToDirectory:",array.shape)
   if array.shape[3] == 1:
     compDir = 'data/label/'
     outShp = (320,320,1)
@@ -863,11 +847,11 @@ print("Shape of X_test:",X_test.shape)
 
 """### Accuracy Assesments"""
 
-threshold = 0.7 #@param {type:"slider", min:0, max:1.0, step:0.1}
+threshold = 0.7
 
 """####IoU loss"""
 
-IOU= True #@param {type:"boolean"}
+IOU= True
 
 name_model = 'resunet_iou'
 
@@ -900,7 +884,6 @@ if IOU:
   )
   print("Final loss: ", hist.history['val_loss'][-1])
   print("Num epochs; ", len(hist.history['val_loss']))
-  exit()
 
 if IOU:
   
@@ -1086,9 +1069,8 @@ if F1:
 
 """#### Acuracy Score"""
 
-AccuracyScore= False #@param {type:"boolean"}
+AccuracyScore= False
 
-#Alex's Source
 from sklearn.metrics import confusion_matrix
 def accuracy_score(label, logit):
     con = confusion_matrix(label.ravel(), logit.ravel()).ravel()
@@ -1119,7 +1101,7 @@ if AccuracyScore:
 
 """#### AUC-ROC"""
 
-AUC_ROC= False #@param {type:"boolean"}
+AUC_ROC= False
 from sklearn.metrics import auc
 from sklearn.metrics import roc_curve
 from sklearn.metrics import roc_auc_score
@@ -1147,19 +1129,13 @@ import pandas as pd
 
 """### Mosaic"""
 
-Mosaic = False #@param {type:"boolean"}
+Mosaic = False
 
-GenerateSpecificMask = False #@param {type:"boolean"}
-SpecificMask = 2 #@param ["1", "2", "3", "4", "5"] {type:"raw"}
+GenerateSpecificMask = False
+SpecificMask = 2
 
 path_mosaic = 'mosaic'
 
-'''if Mosaic:
-  import shutil
-  try:
-      shutil.rmtree(path_mosaic)
-  except OSError as e:
-      print("Error: %s : %s" % (dir_path, e.strerror))'''
 
 if Mosaic:
     #X_mos, Y_mos = getData('mosaic', b_shuffle= False, ratio_shrink=3)
@@ -1290,23 +1266,10 @@ if Mosaic:
   except OSError as e:
       print("Error: %s : %s" % (dir_path, e.strerror))
 
-"""###Assessments"""
-
-import pandas as pd
-
-df = pd.DataFrame(index=['Sensitivity-X','Sensitivity-Y','Normal-X','Normal-Y','Clouds-X','Clouds-Y'
-,'2013-X','2013-Y','2m Resample-X','2m Resample-Y', '3m Resample-X', '3m Resample-Y', '4m Resample-X', '4m Resample-Y','5m Resample-X'
-,'6m Resample-X','6m Resample-Y'])
-
-df.to_csv('AUCassessments.csv')
-
-
-df = pd.read_csv('AUCassessments.csv')
-
 """#### Sensitivity Testing"""
 
-sensitivityTest = True #@param {type:"boolean"}
-ratio = 0.3 #@param {type:"slider", min:0, max:1.0, step:0.1}
+sensitivityTest = True
+ratio = 0.3
 
 def addNoise(filename,ratioIn):
   import cv2
@@ -1358,13 +1321,6 @@ def noisify(ratio):
             sBand=1
         )
 
-'''if sensitivityTest:
-  import shutil
-  path_sensitivity = 'SensitivityTest'
-  try:
-      shutil.rmtree(path_sensitivity)
-  except OSError as e:
-      print("Error: %s : %s" % (dir_path, e.strerror))'''
 
 #Create New Directory for Lower Resolutions
 
@@ -1378,14 +1334,7 @@ if sensitivityTest:
   if not os.path.isdir(os.path.join(path_sensitivity, 'label')):
     os.mkdir(os.path.join(path_sensitivity, 'label'))
   noisify(ratio)
-'''
-if sensitivityTest:
-  import shutil
-  try:
-      shutil.rmtree('data')
-  except OSError as e:
-      print("Error: %s : %s" % (dir_path, e.strerror))
-'''
+
 createDir('data',path_label)
 
 def mosaicColor(test):
@@ -1431,12 +1380,6 @@ if sensitivityTest:
         ax[4].imshow(Y_sens_img_test[i, :, :, 0],cmap=plt.cm.gray)
         ax[4].set_title('labeled')
         ##plt.show()
-
-'''
-if sensitivityTest:
-  fig, ax = plt.subplots(1, 1, figsize=(12, 12))
-  ax.imshow(inverse_convert(X_sens_img[4]))
-  '''
 
 #AUC Curve for S&P noise
 if sensitivityTest:
@@ -1517,11 +1460,10 @@ if sensitivityTest:
   except OSError as e:
       print("Error: %s : %s" % (dir_path, e.strerror))
 createDir('data',path_label)
-#model.load_weights('drive/My Drive/Crop Contour/model/resunet_June_max.h5')
 
 """####Cloud Testing"""
 
-ratio = 0.6 #@param {type:"slider", min:0, max:1.0, step:0.1}
+ratio = 0.6
 
 def Cloudify():
 
@@ -1570,8 +1512,6 @@ def Cloudify():
             sBand=1
         )
 
-#Create New Directory for Lower Resolutions
-
 def clearSensitivity():
   from scipy.ndimage import gaussian_filter
 
@@ -1582,8 +1522,6 @@ def clearSensitivity():
   if not os.path.isdir(os.path.join(path_sensitivity, 'label')):
     os.mkdir(os.path.join(path_sensitivity, 'label'))
   noisify(0)
-
-
 
 if sensitivityTest: 
     clearSensitivity()
@@ -1654,8 +1592,8 @@ if sensitivityTest:
 
 """#### Resampling"""
 
-Resample = True #@param {type:"boolean"}
-ratio = 2 #@param {type:"slider", min:0, max:10, step:1}
+Resample = True
+ratio = 2
 
 path_resample= 'Resample'
 
@@ -1684,12 +1622,6 @@ def rasterResample(ratio):
     img = Image.fromarray(arr)
     img.save(s)
 
-'''if Resample:
-  import shutil
-  try:
-      shutil.rmtree('Resample')
-  except OSError as e:
-      print("Error: %s : %s" % (dir_path, e.strerror))'''
 
 if Resample:
   createDir('Resample',path_label)
@@ -1713,9 +1645,6 @@ if Resample:
   ax[1].imshow(inverse_convert(X_resample_2_img[i]))
   ax[1].set_title('Resampled')
   ###plt.show()
-
-'''fig, ax = plt.subplots(1, 1, figsize=(12, 12))
-ax.imshow(inverse_convert(X_resample[4]))'''
 
 if Resample:
   from sklearn.metrics import roc_curve
@@ -1752,9 +1681,6 @@ if Resample:
 
   Y_pred_resample_3 = model.predict(X_resample_3_img_test)
 
-'''fig, ax = plt.subplots(1, 1, figsize=(12, 12))
-ax.imshow(inverse_convert(X_resample_img[4]))'''
-
 if Resample:
   fig, ax = plt.subplots(1, 1, figsize=(6, 6))
   X_no,Y_no,Thresh_no = roc_curve(Y_test.ravel(), Y_pred.ravel())
@@ -1788,8 +1714,6 @@ if Resample:
 
   Y_pred_resample_4 = model.predict(X_resample_4_img_test)
 
-'''fig, ax = plt.subplots(1, 1, figsize=(12, 12))
-ax.imshow(inverse_convert(X_resample[4]))'''
 
 if Resample:
   fig, ax = plt.subplots(1, 1, figsize=(6, 6))
@@ -1823,11 +1747,6 @@ if Resample:
   Y_pred = model.predict(X_test)
 
   Y_pred_resample_5 = model.predict(X_resample_5_img_test)
-
-
-#fig, ax = plt.subplots(1, 1, figsize=(12, 12))
-#ax.imshow(inverse_convert(X[4]))
-
 
 if Resample:
   fig, ax = plt.subplots(1, 1, figsize=(6, 6))
@@ -1881,12 +1800,12 @@ if Resample:
 
 """####Different Site"""
 
-DiffSite= True #@param {type:"boolean"}
+DiffSite= True
 
 if DiffSite:
-  print("Starting diff test")
+
   path_diffSite = 'test'
-  createDir(path_diffSite,"/Users/dakota/Documents/UARK/CropContour/Code/JsonTiffMasks", fromLIF=False)
+  createDir(path_diffSite,path_55, fromLIF=False)
 
   X_diff, Y_diff = getData('test', b_shuffle= False, ratio_shrink=3, test=True)
   
@@ -1906,16 +1825,15 @@ if DiffSite:
   #Save img
   for i in predictionsList:
     file = i.replace("_Mask_Mask","_Mask")
-    print(file)
     img = Image.open(file)
     base = os.path.basename(file)
-    img.save("/Volumes/Research/CropContour/55tiles/Img/" + base)
+    img.save("55tiles/Img/" + base)
 
   #Save Label
   for i in predictionsList:
     img = Image.open(i.replace("img","label"))
     base = os.path.basename(i)
-    img.save("/Volumes/Research/CropContour/55tiles/label/" + base)
+    img.save("55tiles/label/" + base)
 
   #Save Prediction
   print(predictionsList)
@@ -2063,13 +1981,7 @@ newcolors = np.vstack((top(np.linspace(0.05, 0.5, 128)),
 newcmp = ListedColormap(newcolors, name='Fields')
 
 
-
-  
-
-
 """#### Final Assessment"""
-
-#model.load_weights('drive/My Drive/Crop Contour/model/resunet_June_max.h5')
 
 try:
       shutil.rmtree('data')
@@ -2169,8 +2081,6 @@ s = 'Salt and Pepper: ' + str(auc(X_SENSE,Y_SENSE))[:5] + ' to ' + str(auc(X_SEN
 ax[1].fill_between(X_SENSE,Y_SENSE,Y_SENSE2, color='teal',label= s)
 
 ax[1].plot([0,1],[0,1],'--')
-
-#ax[1].axes.yaxis.set_visible(False)
 ax[1].set_yticklabels(["","","","","",""])
 
 ax[1].legend(loc='lower right', shadow=False, ncol=1)
@@ -2192,7 +2102,6 @@ ax[2].plot(X_CountyMin,Y_CountyMin,color='teal',label=s)
 
 ax[2].plot([0,1],[0,1],'--')
 
-#ax[1].axes.yaxis.set_visible(False)
 ax[2].set_yticklabels(["","","","","",""])
 
 ax[2].legend(loc='lower right', shadow=False, ncol=1)
@@ -2201,89 +2110,75 @@ ax[2].set_title("    c)", loc='left')
 
 plt.savefig('Graphs/AUCGraphResampling.png', dpi = 300, transparent = True)
 plt.clf()
-###plt.show()
 
 
 i = 55
 
 
-for x in range(1):
-  fig, ax = plt.subplots(2, 4, figsize=(40, 20),constrained_layout = True)
-  plt.rcParams.update({'font.size': 28})
-  plt.xticks([])
-  plt.yticks([])
+fig, ax = plt.subplots(2, 4, figsize=(40, 20),constrained_layout = True)
+plt.rcParams.update({'font.size': 28})
+plt.xticks([])
+plt.yticks([])
 
-  ax[0,0].set_title('a)   NAIP Image (1m)', loc = 'left')
-  ax[0,0].imshow(inverse_convert(X_test[i]), vmin=0, vmax=1)
-  ax[0,0].set_xticks([])
-  ax[00,0].set_yticks([])
-  #ax[0,0].axis('off')
+ax[0,0].set_title('a)   NAIP Image (1m)', loc = 'left')
+ax[0,0].imshow(inverse_convert(X_test[i]), vmin=0, vmax=1)
+ax[0,0].set_xticks([])
+ax[00,0].set_yticks([])
+#ax[0,0].axis('off')
 
-  ax[0,1].set_title('b) Normal Prediction (1m)', loc = 'left')
-  ax[0,1].imshow(Y_pred_sens[i, :, :, 0], vmin=0, vmax=1,cmap=newcmp)
-  ax[0,1].set_xticks([])
-  ax[0,1].set_yticks([])
-  #ax[0,0].axis('off')
+ax[0,1].set_title('b) Normal Prediction (1m)', loc = 'left')
+ax[0,1].imshow(Y_pred_sens[i, :, :, 0], vmin=0, vmax=1,cmap=newcmp)
+ax[0,1].set_xticks([])
+ax[0,1].set_yticks([])
+#ax[0,0].axis('off')
 
-  ax[0,2].set_title('c)   Salt and Pepper',loc = 'left')
-  #ax[0,1].imshow(inverse_convert(X_sens_img[i]))
-  ax[0,2].imshow(Y_pred[i, :, :, 0], vmin=0, vmax=1,cmap=newcmp)
-  ax[0,2].set_xticks([])
-  ax[0,2].set_yticks([])
-  #ax[0,2].axis('off')
+ax[0,2].set_title('c)   Salt and Pepper',loc = 'left')
+#ax[0,1].imshow(inverse_convert(X_sens_img[i]))
+ax[0,2].imshow(Y_pred[i, :, :, 0], vmin=0, vmax=1,cmap=newcmp)
+ax[0,2].set_xticks([])
+ax[0,2].set_yticks([])
+#ax[0,2].axis('off')
 
-  ax[0,3].set_title('d)     Cloud Cover',loc = 'left')
-  #ax[0,3].imshow(inverse_convert(X_cloud_img[i]))
-  ax[0,3].imshow(Y_pred_cloud[i, :, :, 0], vmin=0, vmax=1,cmap=newcmp)
-  ax[0,3].set_xticks([])
-  ax[0,3].set_yticks([])
-  #ax[0,2].axis('off')
-  '''
-  ax[0,4].set_title('e)      Ground Truth',loc = 'left')
-  ax[0,4].imshow(Y_test[i, :, :, 0], vmin=0, vmax=1,cmap='gray')
-  ax[0,4].set_xticks([])
-  ax[0,4].set_yticks([])
-  #ax[0,3].axis('off')
-  '''
-  ax[1,0].set_title('f)   Coarsened to 10 m',loc = 'left')
-  #ax[1,0].imshow(inverse_convert(X_resample_2_img[i]))
-  ax[1,0].imshow(Y_pred_resample_2[i, :, :, 0], vmin=0, vmax=1,cmap=newcmp)
-  ax[1,0].set_xticks([])
-  ax[1,0].set_yticks([])
-  #ax[1,0].axis('off')
+ax[0,3].set_title('d)     Cloud Cover',loc = 'left')
+#ax[0,3].imshow(inverse_convert(X_cloud_img[i]))
+ax[0,3].imshow(Y_pred_cloud[i, :, :, 0], vmin=0, vmax=1,cmap=newcmp)
+ax[0,3].set_xticks([])
+ax[0,3].set_yticks([])
+#ax[0,2].axis('off')
+'''
+ax[0,4].set_title('e)      Ground Truth',loc = 'left')
+ax[0,4].imshow(Y_test[i, :, :, 0], vmin=0, vmax=1,cmap='gray')
+ax[0,4].set_xticks([])
+ax[0,4].set_yticks([])
+#ax[0,3].axis('off')
+'''
+ax[1,0].set_title('f)   Coarsened to 10 m',loc = 'left')
+#ax[1,0].imshow(inverse_convert(X_resample_2_img[i]))
+ax[1,0].imshow(Y_pred_resample_2[i, :, :, 0], vmin=0, vmax=1,cmap=newcmp)
+ax[1,0].set_xticks([])
+ax[1,0].set_yticks([])
+#ax[1,0].axis('off')
 
-  ax[1,1].set_title('g)   Coarsened to 20 m',loc = 'left')
-  #ax[1,1].imshow(inverse_convert(X_resample_3_img[i]))
-  ax[1,1].imshow(Y_pred_resample_3[i, :, :, 0], vmin=0, vmax=1,cmap=newcmp)
-  ax[1,1].set_xticks([])
-  ax[1,1].set_yticks([])
-  #ax[1,1].axis('off')
+ax[1,1].set_title('g)   Coarsened to 20 m',loc = 'left')
+#ax[1,1].imshow(inverse_convert(X_resample_3_img[i]))
+ax[1,1].imshow(Y_pred_resample_3[i, :, :, 0], vmin=0, vmax=1,cmap=newcmp)
+ax[1,1].set_xticks([])
+ax[1,1].set_yticks([])
+#ax[1,1].axis('off')
 
-  ax[1,2].set_title('h)   Coarsened to 30 m',loc = 'left')
-  #ax[1,2].imshow(inverse_convert(X_resample_4_img[i]))
-  ax[1,2].imshow(Y_pred_resample_4[i, :, :, 0], vmin=0, vmax=1,cmap=newcmp)
-  ax[1,2].set_xticks([])
-  ax[1,2].set_yticks([])
-  #ax[1,2].axis('off')
+ax[1,2].set_title('h)   Coarsened to 30 m',loc = 'left')
+#ax[1,2].imshow(inverse_convert(X_resample_4_img[i]))
+ax[1,2].imshow(Y_pred_resample_4[i, :, :, 0], vmin=0, vmax=1,cmap=newcmp)
+ax[1,2].set_xticks([])
+ax[1,2].set_yticks([])
+#ax[1,2].axis('off')
 
-  ax[1,3].set_title('i)   Coarsened to 60 m',loc = 'left')
-  #ax[1,3].imshow(inverse_convert(X_resample_5_img[i]))
-  ax[1,3].imshow(Y_pred_resample_5[i, :, :, 0], vmin=0, vmax=1,cmap=newcmp)
-  ax[1,3].set_xticks([])
-  ax[1,3].set_yticks([])
-  #ax[1,3].axis('off')
-  '''
-  ax[1,4].set_title('j)   Coarsened to 60 m',loc = 'left')
-  #ax[1,3].imshow(inverse_convert(X_resample_5_img[i]))
-  ax[1,4].imshow(Y_pred_resample_6[i, :, :, 0], vmin=0, vmax=1,cmap=newcmp)
-  ax[1,4].set_xticks([])
-  ax[1,4].set_yticks([])
-  #ax[1,3].axis('off')
-  '''
-
-
-
-  i+=1
+ax[1,3].set_title('i)   Coarsened to 60 m',loc = 'left')
+#ax[1,3].imshow(inverse_convert(X_resample_5_img[i]))
+ax[1,3].imshow(Y_pred_resample_5[i, :, :, 0], vmin=0, vmax=1,cmap=newcmp)
+ax[1,3].set_xticks([])
+ax[1,3].set_yticks([])
+#ax[1,3].axis('off')
 plt.savefig('AugmentationComparison.png', dpi = 300, transparent = True)
 
 
