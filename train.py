@@ -1,11 +1,33 @@
+import itertools
+import json
 import os
+import random as rn
+import shutil
+import statistics
+import sys
+import time
+from base64 import *
 from glob import glob
+from shutil import copyfile
 
+import cv2
+import imgaug.augmenters as iaa
+import matplotlib.pyplot as plt
+import numpy as np
+import rasterio
+import tensorflow as tf
+import tensorflow.keras as tk
+import tensorflow.keras.backend as K
+from PIL import Image, ImageColor, ImageDraw
+from matplotlib import cm
+from matplotlib.colors import ListedColormap
+from matplotlib.lines import Line2D
+from osgeo import gdal, ogr
+from sklearn.metrics import auc, confusion_matrix, f1_score, jaccard_score, precision_score, recall_score, roc_auc_score, roc_curve
 
 #These are the paths that needs changed
-
-path_label = "/Volumes/Research/CropContour/v3"#Path to unprocessed LIF files
-path_55 = "/Users/dakota/Documents/UARK/CropContour/Code/JsonTiffMasks"#Path to the "55 Tiles". Contains both image and label as separate .tif
+path_label = "/Users/dakota/Desktop/LonokeComplete"#Path to unprocessed LIF files
+path_55 = "/Users/dakota/Desktop/55tilesComplete"#Path to the "55 Tiles". Contains both image and label as separate .tif
 
 #Intermediary directories
 path_processed = 'data'
@@ -41,18 +63,14 @@ if not os.path.isdir(os.path.join(path_processed_save, 'Y','pred')):
 
 
 
-import matplotlib.pyplot as plt
+
 
 """## Conversion"""
 
-#utils.py
 
-import numpy as np
-from PIL import Image
 
 def compose_file_list(dir_img, dir_mask,suffix='.tif'):
     imgs = []
-    import glob
     for imgName in glob.glob(dir_img +'*'+suffix):
         imgs.append(imgName)
     imgs.sort()
@@ -120,16 +138,6 @@ numStraight = 0
 numPivot = 0
 numZero = 0
 numUnknown = 0
-
-from osgeo import ogr
-from osgeo import gdal
-import json
-from base64 import *
-import  numpy as np
-from PIL import Image
-from PIL import ImageDraw
-import sys
-import os
 
 dict_color = {
     'u': 'white',
@@ -273,14 +281,14 @@ def imgs_masks_from_lif(srcLIFfile,dstImg=None,
                 feat.SetGeometry(poly)
                 layernew.CreateFeature(feat)
             ds_new.Destroy()
-        import statistics
+
         print("Average polygon area: ", sum(areaOfPolygons)/len(areaOfPolygons))
         print("Stdev polygon area: ",statistics.stdev(areaOfPolygons))
         print("Max Polygon area: ", max(areaOfPolygons))
         print("Min Polygon area: ", min(areaOfPolygons))
         return imageData,img_mask,shapes
 
-from PIL import ImageColor
+
 arr_color = [(0, 0, 0)]
 for k in dict_color:
     arr_color.append(ImageColor.getrgb(dict_color[k]))
@@ -290,9 +298,6 @@ arr_color = np.array(arr_color)
 Grayscale = True #@param {type:"boolean"}
 
 def gray(filename):
-    
-    import numpy as np
-    import matplotlib.pyplot as pyplot
 
     img = Image.open(filename)
 
@@ -315,9 +320,7 @@ def gray(filename):
 
 #generateMask.py
 
-from osgeo import gdal
-import numpy as np
-import cv2
+
 
 def _array_to_raster(array,dst_filename,x_size,y_size,x_pixels,y_pixels,x_min,y_max,wkt_projection,datatype):
     """Array > Raster
@@ -483,15 +486,6 @@ for ratio_shrink in [2, 3, 4, 8]:
 
 # Run it to obtain reproducible results across machines (from  keras.io)
 
-import numpy as np
-#%tensorflow_version 1.x
-import tensorflow  as tf
-import tensorflow.keras as tk
-
-import random as rn
-
-import os
-
 os.environ['PYTHONHASHSEED'] ='0'
 
 #np.random.seed(42)
@@ -623,6 +617,7 @@ def createDir(path,Input,masks=True,fromLIF = True):
           outImg = os.path.join(trainImgPath, fname0 + ".tif")
         else:
           outImg = os.path.join(trainImgPath, fname0[:-5] + ".tif")
+        print(outImg)
         if masks:
           if fromLIF:
             inLif = os.path.join(lifImgPath, fname0 + ".lif")
@@ -634,7 +629,11 @@ def createDir(path,Input,masks=True,fromLIF = True):
                 dstMask=outMask
             )
           else:
-             outMask = os.path.join(Input, fname0+".tif")
+             outMask = os.path.join(trainImgPath, fname0+".tif")
+             print(outMask)
+             print(outImg)
+             shutil.copy(fnameAll, outMask)
+             shutil.copy(os.path.join(Input, fname0[:-5] + ".tif"), outImg)
           if Grayscale:
             print("Graying..",outImg)
             gray(outImg)
@@ -772,7 +771,7 @@ def jaccard_distance_loss(y_true, y_pred, smooth=100):
     @url: https://gist.github.com/wassname/f1452b748efcbeb4cb9b1d059dce6f96
     @author: wassname
     """
-    import tensorflow.keras.backend as K
+
     intersection = K.sum(K.abs(y_true * y_pred), axis=-1)
     sum_ = K.sum(K.abs(y_true) + K.abs(y_pred), axis=-1)
     jac = (intersection + smooth) / (sum_ - intersection + smooth)
@@ -782,10 +781,7 @@ def hybrid_loss(y_true, y_pred):
     loss = tk.losses.binary_crossentropy(y_true, y_pred) + jaccard_distance_loss(y_true, y_pred)
     return loss
 
-import cv2
-from os import listdir
-from shutil import copyfile
-import rasterio
+
 def loadToDirectory(array, dir, test=False):
   if array.shape[3] == 1:
     compDir = 'data/label/'
@@ -836,7 +832,7 @@ def loadToDirectory(array, dir, test=False):
             rolled_array = np.rollaxis(np.float32(array[i]), axis=2)
             dst.write(rolled_array)
         break
-import time
+
 startTime = time.perf_counter()
 Y_pred = model.predict(X_test)
 stopTime = time.perf_counter()
@@ -894,7 +890,7 @@ if IOU:
   plt.plot(hist.history['loss'],label = "Training")
   plt.plot(hist.history['val_loss'], label = "Validation")
   plt.legend()
-  plt.show()
+  #plt.show()
 
 
 
@@ -909,7 +905,7 @@ if IOU:
       ax[1].set_title('predicted')
       ax[2].imshow(Y_test[i, :, :, 0], cmap=plt.cm.gray)
       ax[2].set_title('labeled')
-      plt.show()
+      #plt.show()
 
 
 print("Generating Classification...")
@@ -936,7 +932,7 @@ ax[2].set_xticks([])
 ax[2].set_yticks([])
 plt.savefig('Classification.png',dpi=300)
 plt.clf()
-plt.show()
+#plt.show()
 print(" Done..")
 
 def thresholdArray(array):
@@ -950,7 +946,7 @@ def thresholdArray(array):
   return newArr
 
 if IOU:
-  from sklearn.metrics import jaccard_score
+
 
   Ave =0
   num = 0
@@ -970,7 +966,7 @@ BER= True #@param {type:"boolean"}
 
 #Alex's Code from Metric.zip
 if BER:
-  from sklearn.metrics import confusion_matrix
+
   def ber(label, logit):
       mat= confusion_matrix(label, logit)
       if len(mat) == 1:
@@ -1009,9 +1005,9 @@ if BER:
 
 """#### Precision"""
 
-Precision= False #@param {type:"boolean"}
+Precision= True #@param {type:"boolean"}
 
-from sklearn.metrics import precision_score
+
 if Precision:
   Ave = 0
   for i in range(50):
@@ -1029,9 +1025,9 @@ if Precision:
 
 """#### Recall"""
 
-Recall= False #@param {type:"boolean"}
+Recall= True #@param {type:"boolean"}
 
-from sklearn.metrics import recall_score
+
 if Recall:
   Ave = 0
   for i in range(50):
@@ -1049,9 +1045,9 @@ if Recall:
 
 """#### F1"""
 
-F1= False #@param {type:"boolean"}
+F1= True #@param {type:"boolean"}
 
-from sklearn.metrics import f1_score
+
 if F1:
   Ave = 0
   for i in range(50):
@@ -1069,9 +1065,9 @@ if F1:
 
 """#### Acuracy Score"""
 
-AccuracyScore= False
+AccuracyScore= True
 
-from sklearn.metrics import confusion_matrix
+
 def accuracy_score(label, logit):
     con = confusion_matrix(label.ravel(), logit.ravel()).ravel()
     if len(con) == 4:
@@ -1101,10 +1097,8 @@ if AccuracyScore:
 
 """#### AUC-ROC"""
 
-AUC_ROC= False
-from sklearn.metrics import auc
-from sklearn.metrics import roc_curve
-from sklearn.metrics import roc_auc_score
+AUC_ROC= True
+
 
 if AUC_ROC:
   
@@ -1125,7 +1119,7 @@ if AUC_ROC:
       ax[3].plot(X_auc,Y_auc)
       ##plt.show()
 
-import pandas as pd
+
 
 """### Mosaic"""
 
@@ -1154,7 +1148,7 @@ if Mosaic:
       ##plt.show()
 
 #Mosaic the image
-import cv2
+
 def mosaicImages(test):
   #new_im = Image.fromarray(np.uint8(test[10, :, :, 0]))
 
@@ -1179,9 +1173,7 @@ def adjustSpecMask(mask):
       newArr[i] = 0
   return newArr
 
-from matplotlib.lines import Line2D
-from sklearn.metrics import roc_curve
-from sklearn.metrics import roc_auc_score
+
 if Mosaic:
   
   COLOR = 'black'
@@ -1260,7 +1252,7 @@ def thresholdRavel(array):
 
 
 if Mosaic:
-  import shutil
+
   try:
       shutil.rmtree(path_mosaic)
   except OSError as e:
@@ -1272,9 +1264,7 @@ sensitivityTest = True
 ratio = 0.3
 
 def addNoise(filename,ratioIn):
-  import cv2
-  import numpy as np
-  from skimage.util import random_noise
+
   img = cv2.imread(filename)
   gauss = np.random.normal(0,ratioIn,img.size)
   gauss = gauss.reshape(img.shape[0],img.shape[1],img.shape[2]).astype('uint8')
@@ -1325,7 +1315,7 @@ def noisify(ratio):
 #Create New Directory for Lower Resolutions
 
 if sensitivityTest:
-  from scipy.ndimage import gaussian_filter
+
   path_sensitivity = 'SensitivityTest'
   if not os.path.isdir(path_sensitivity):
     os.mkdir(path_sensitivity)
@@ -1404,7 +1394,7 @@ if sensitivityTest:
 
 
 
-import shutil
+
 try:
     shutil.rmtree('data')
     shutil.rmtree('SensitivityTest')
@@ -1413,7 +1403,7 @@ except OSError as e:
 
 createDir('data',path_label)
 if sensitivityTest:
-  from scipy.ndimage import gaussian_filter
+
   path_sensitivity = 'SensitivityTest'
   if not os.path.isdir(path_sensitivity):
     os.mkdir(path_sensitivity)
@@ -1425,7 +1415,6 @@ if sensitivityTest:
   noisify(ratio)
 
 if sensitivityTest:
-  import shutil
   try:
       shutil.rmtree('data')
   except OSError as e:
@@ -1454,7 +1443,6 @@ if sensitivityTest:
 
 
 if sensitivityTest:
-  import shutil
   try:
       shutil.rmtree('data')
   except OSError as e:
@@ -1487,13 +1475,7 @@ def Cloudify():
             dstImg=outImg,
             dstMask=outMask
         )
-      
-      
-      import imgaug.augmenters as iaa
-      #import imgaug.augmenters.blend as iaab
-      import cv2
-      #import imgaug.augmenters as iaa
-      #aug = iaa.Clouds()
+
       aug = iaa.Alpha(factor = ratio, first = iaa.Clouds())
       img = cv2.imread(outImg)
       img = aug(image = img)
@@ -1513,7 +1495,7 @@ def Cloudify():
         )
 
 def clearSensitivity():
-  from scipy.ndimage import gaussian_filter
+
 
   if not os.path.isdir(path_sensitivity):
     os.mkdir(path_sensitivity)
@@ -1550,7 +1532,6 @@ if sensitivityTest:
     #del X_cloud_img_test, Y_cloud_img_test
 
 if sensitivityTest:
-  import shutil
   path_sensitivity = 'SensitivityTest'
   try:
       shutil.rmtree(path_sensitivity)
@@ -1598,7 +1579,6 @@ ratio = 2
 path_resample= 'Resample'
 
 if Resample:
-  import shutil
   try:
       shutil.rmtree('data')
   except OSError as e:
@@ -1606,7 +1586,7 @@ if Resample:
 
 if Resample:
   createDir('data',path_label)
-from skimage.measure import block_reduce
+
 def rasterResample(ratio):
   names = os.listdir('Resample/img')
   print(names)
@@ -1637,7 +1617,7 @@ if Resample:
   Y_pred_resample_2 = model.predict(X_resample_2_img_test)
 
 if Resample:
-  from scipy import ndimage, misc
+
   #resample('Lonoke64.tif',ratio)
   fig, ax = plt.subplots(1, 2, figsize=(21, 7))
   ax[0].imshow(inverse_convert(X[i]))
@@ -1647,12 +1627,11 @@ if Resample:
   ###plt.show()
 
 if Resample:
-  from sklearn.metrics import roc_curve
-  from sklearn.metrics import roc_auc_score
+
   fig, ax = plt.subplots(1, 1, figsize=(6, 6))
   X_no,Y_no,Thresh_no = roc_curve(Y_test.ravel(), Y_pred.ravel())
   X_RE_2,Y_RE_2,Thresh_RE = roc_curve(Y_resample_2_img_test.ravel(), Y_pred_resample_2.ravel())
-  from sklearn.metrics import auc
+
   print("AUC Resampled_10", auc(X_RE_2,Y_RE_2))
   print("AUC Normal", auc(X_no,Y_no))
   ax.plot(X_RE_2,Y_RE_2)
@@ -1660,7 +1639,6 @@ if Resample:
   ##plt.show()
 
 if Resample:
-  import shutil
   try:
       shutil.rmtree('Resample')
   except OSError as e:
@@ -1685,7 +1663,7 @@ if Resample:
   fig, ax = plt.subplots(1, 1, figsize=(6, 6))
   X_no,Y_no,Thresh_no = roc_curve(Y_test.ravel(), Y_pred.ravel())
   X_RE_3,Y_RE_3,Thresh_RE = roc_curve(Y_resample_3_img_test.ravel(), Y_pred_resample_3.ravel())
-  from sklearn.metrics import auc
+
   print("AUC Resampled-30", auc(X_RE_3,Y_RE_3))
   print("AUC Normal", auc(X_no,Y_no))
   ax.plot(X_RE_3,Y_RE_3)
@@ -1693,7 +1671,6 @@ if Resample:
   ##plt.show()
 
 if Resample:
-  import shutil
   try:
       shutil.rmtree('Resample')
   except OSError as e:
@@ -1719,7 +1696,6 @@ if Resample:
   fig, ax = plt.subplots(1, 1, figsize=(6, 6))
   X_no,Y_no,Thresh_no = roc_curve(Y_test.ravel(), Y_pred.ravel())
   X_RE_4,Y_RE_4,Thresh_RE = roc_curve(Y_resample_4_img_test.ravel(), Y_pred_resample_4.ravel())
-  from sklearn.metrics import auc
   print("AUC Resampled-60", auc(X_RE_4,Y_RE_4))
   print("AUC Normal", auc(X_no,Y_no))
   ax.plot(X_RE_4,Y_RE_4)
@@ -1727,7 +1703,6 @@ if Resample:
   ##plt.show()
 
 if Resample:
-  import shutil
   try:
       shutil.rmtree('Resample')
   except OSError as e:
@@ -1752,14 +1727,12 @@ if Resample:
   fig, ax = plt.subplots(1, 1, figsize=(6, 6))
   X_no,Y_no,Thresh_no = roc_curve(Y_test.ravel(), Y_pred.ravel())
   X_RE_5,Y_RE_5,Thresh_RE = roc_curve(Y_resample_5_img_test.ravel(), Y_pred_resample_5.ravel())
-  from sklearn.metrics import auc
   print("AUC Resampled", auc(X_RE_5,Y_RE_5))
   print("AUC Normal", auc(X_no,Y_no))
   ax.plot(X_RE_5,Y_RE_5)
   ax.plot(X_no,Y_no)
   ###plt.show()
 
-  import shutil
   try:
       shutil.rmtree('Resample')
   except OSError as e:
@@ -1784,13 +1757,11 @@ if Resample:
   fig, ax = plt.subplots(1, 1, figsize=(6, 6))
   X_no,Y_no,Thresh_no = roc_curve(Y_test.ravel(), Y_pred.ravel())
   X_RE_6,Y_RE_6,Thresh_RE = roc_curve(Y_resample_6_img_test.ravel(), Y_pred_resample_5.ravel())
-  from sklearn.metrics import auc
   print("AUC Resampled", auc(X_RE_6,Y_RE_6))
   print("AUC Normal", auc(X_no,Y_no))
   ax.plot(X_RE_6,Y_RE_6)
   ax.plot(X_no,Y_no)
   ##plt.show()
-  import shutil
   try:
       shutil.rmtree('Resample')
   except OSError as e:
@@ -1822,6 +1793,7 @@ if DiffSite:
   print("Shape Ydiff:", Y_diff.shape)
   print("Predictions List:", predictionsList)
 
+  '''
   #Save img
   for i in predictionsList:
     file = i.replace("_Mask_Mask","_Mask")
@@ -1837,21 +1809,21 @@ if DiffSite:
 
   #Save Prediction
   print(predictionsList)
+  '''
   Y_pred_diff = model.predict(X_diff)
   print(Y_pred_diff.shape)
+  '''
   for x,i in enumerate(predictionsList):
     file = i.replace('_Mask_Mask',"_pred")
     img = Image.fromarray(Y_pred_diff[x,:,:,0], 'F')
     base = os.path.basename(file)
     img.save("/Volumes/Research/CropContour/ConvertedPredictions/" + base)
-
-  from sklearn.metrics import roc_auc_score
+  '''
   print("Diff AUC Score:", roc_auc_score(Y_diff.ravel(), Y_pred_diff.ravel()))
   X_DIFF,Y_DIFF,Thresh_RE = roc_curve(Y_diff.ravel(), Y_pred_diff.ravel())
   print("X_DIFF",X_DIFF)
   print("Y_DIFF",Y_DIFF)
   overallDiffAUC = auc(X_DIFF,Y_DIFF)
-  from sklearn.metrics import auc
   print("Overall AUC Diff:", overallDiffAUC)
 
   countyList = ['Arkansas', 'Clay', 'Craighead', 'Crittenden', 'Desha', 'Greene', "Jackson", 'Jefferson', 'Lawrence', 'Mississippi', 'Woodruff']
@@ -1921,14 +1893,14 @@ if DiffSite:
     Y_pred_county = model.predict(X_county)
 
     print("Diff Acc")
-    from sklearn.metrics import accuracy_score
+
     ACC_dict[i] = accuracy_score(Y_county.ravel(),thresholdArray(Y_pred_county.ravel()))
     print("Diff F1")
     
     F1_dict[i] = f1_score(Y_county.ravel(),thresholdArray(Y_pred_county.ravel()))
 
     print("Diff IOU")
-    from sklearn.metrics import jaccard_score
+
     IOU_dict[i] = jaccard_score(Y_county.ravel(),thresholdArray(Y_pred_county.ravel()))
 
     print("Diff BER")
@@ -1967,11 +1939,7 @@ if DiffSite:
 
 
 
-import numpy as np
-import matplotlib.pyplot as plt
-from matplotlib import cm
-from matplotlib.colors import ListedColormap, LinearSegmentedColormap 
- 
+
 top = cm.get_cmap('RdGy_r', 128)
 bottom = cm.get_cmap('YlGn', 128)
 
@@ -1995,6 +1963,11 @@ X_test, Y_test = X[idx_test], Y[idx_test]
 Y_pred = model.predict(X_test)
 X_norm , Y_norm, Thresh_norm = roc_curve(Y_test.ravel(), Y_pred.ravel())
 
+if not os.path.isdir('Graphs'):
+    os.mkdir('Graphs')
+
+if not os.path.isdir('Graphs/AUCarrays'):
+    os.mkdir('Graphs/AUCarrays')
 #-------Save arrays-----------
 np.save('Graphs/AUCarrays/X_norm.npy',X_norm)
 np.save('Graphs/AUCarrays/Y_norm.npy',Y_norm)
@@ -2031,252 +2004,3 @@ np.save('Graphs/AUCarrays/Y_CountyMax.npy',Y_CountyMax)
 
 np.save('Graphs/AUCarrays/X_CountyMin.npy',X_CountyMin)
 np.save('Graphs/AUCarrays/Y_CountyMin.npy',Y_CountyMin)
-
-plt.rcParams.update({'font.size': 15, 'font.family' : "serif"})
-fig, ax = plt.subplots(1, 3, figsize=(18, 6))
-ax[0].grid(False)
-ax[1].grid(False)
-ax[2].grid(False)
-
-
-s = 'Normal: ' + str(auc(X_norm,Y_norm))[:5]
-ax[0].plot(X_norm,Y_norm, color = 'blue', label= s)
-
-s = '10 m: ' + str(auc(X_RE_2,Y_RE_2))[:5]
-ax[0].plot(X_RE_2,Y_RE_2,color='black',label=s)
-
-s = '20 m: ' + str(auc(X_RE_3,Y_RE_3))[:5]
-ax[0].plot(X_RE_3,Y_RE_3,color='teal',label=s)
-
-s = '30 m: ' + str(auc(X_RE_4,Y_RE_4,))[:5]
-ax[0].plot(X_RE_4,Y_RE_4,color='lightseagreen',label=s)
-
-s = '60 m: ' + str(auc(X_RE_5,Y_RE_5))[:5]
-ax[0].plot(X_RE_5,Y_RE_5,color='darkgreen',label=s)
-
-
-ax[0].plot([0,1],[0,1],'--')
-
-
-ax[0].legend(loc='lower right', shadow=False, ncol=1)
-ax[0].set(xlabel="False Positive Rate")
-ax[0].set(ylabel="True Positive Rate")
-ax[0].set_title("     a)",loc='left')
-
-
-s = 'Normal: ' + str(auc(X_norm,Y_norm))[:5]
-ax[1].plot(X_norm,Y_norm, color = 'blue', label= s)
-
-import random 
-minEntries = min([X_cloud.shape[0],Y_cloud.shape[0],Y_cloud2.shape[0]])
-print('X Shape ', X_cloud.shape)
-print('Y Shape ', Y_cloud.shape)
-print('Y2 Shape ', Y_cloud2.shape)
-print('MinEntries ', minEntries)
-
-s = 'Cloudy: ' + str(auc(X_cloud,Y_cloud))[:5] + ' to ' + str(auc(X_cloud2,Y_cloud2))[:5]
-ax[1].fill_between(random.sample(list(X_cloud),minEntries),random.sample(list(Y_cloud),minEntries),random.sample(list(Y_cloud2),minEntries), color='darkgreen',label=s)
-
-s = 'Salt and Pepper: ' + str(auc(X_SENSE,Y_SENSE))[:5] + ' to ' + str(auc(X_SENSE2,Y_SENSE2))[:5]
-ax[1].fill_between(X_SENSE,Y_SENSE,Y_SENSE2, color='teal',label= s)
-
-ax[1].plot([0,1],[0,1],'--')
-ax[1].set_yticklabels(["","","","","",""])
-
-ax[1].legend(loc='lower right', shadow=False, ncol=1)
-ax[1].set(xlabel="False Positive Rate")
-ax[1].set_title("    b)", loc='left')
-
-
-s = 'Normal: ' + str(auc(X_norm,Y_norm))[:5]
-ax[2].plot(X_norm,Y_norm, color = 'blue', label= s)
-
-s = 'Avg Diff Site: ' + str(auc(X_DIFF,Y_DIFF))[:5]
-ax[2].plot(X_DIFF,Y_DIFF,color='darkgreen',label=s)
-
-s = 'Max Diff Site: ' + str(CountyMax_AUC)[:5]
-ax[2].plot(X_CountyMax,Y_CountyMax,color='lightseagreen',label=s)
-
-s = 'Min Diff Site: ' + str(CountyMin_AUC)[:5]
-ax[2].plot(X_CountyMin,Y_CountyMin,color='teal',label=s)
-
-ax[2].plot([0,1],[0,1],'--')
-
-ax[2].set_yticklabels(["","","","","",""])
-
-ax[2].legend(loc='lower right', shadow=False, ncol=1)
-ax[2].set(xlabel="False Positive Rate")
-ax[2].set_title("    c)", loc='left')
-
-plt.savefig('Graphs/AUCGraphResampling.png', dpi = 300, transparent = True)
-plt.clf()
-
-
-i = 55
-
-
-fig, ax = plt.subplots(2, 4, figsize=(40, 20),constrained_layout = True)
-plt.rcParams.update({'font.size': 28})
-plt.xticks([])
-plt.yticks([])
-
-ax[0,0].set_title('a)   NAIP Image (1m)', loc = 'left')
-ax[0,0].imshow(inverse_convert(X_test[i]), vmin=0, vmax=1)
-ax[0,0].set_xticks([])
-ax[00,0].set_yticks([])
-#ax[0,0].axis('off')
-
-ax[0,1].set_title('b) Normal Prediction (1m)', loc = 'left')
-ax[0,1].imshow(Y_pred_sens[i, :, :, 0], vmin=0, vmax=1,cmap=newcmp)
-ax[0,1].set_xticks([])
-ax[0,1].set_yticks([])
-#ax[0,0].axis('off')
-
-ax[0,2].set_title('c)   Salt and Pepper',loc = 'left')
-#ax[0,1].imshow(inverse_convert(X_sens_img[i]))
-ax[0,2].imshow(Y_pred[i, :, :, 0], vmin=0, vmax=1,cmap=newcmp)
-ax[0,2].set_xticks([])
-ax[0,2].set_yticks([])
-#ax[0,2].axis('off')
-
-ax[0,3].set_title('d)     Cloud Cover',loc = 'left')
-#ax[0,3].imshow(inverse_convert(X_cloud_img[i]))
-ax[0,3].imshow(Y_pred_cloud[i, :, :, 0], vmin=0, vmax=1,cmap=newcmp)
-ax[0,3].set_xticks([])
-ax[0,3].set_yticks([])
-#ax[0,2].axis('off')
-'''
-ax[0,4].set_title('e)      Ground Truth',loc = 'left')
-ax[0,4].imshow(Y_test[i, :, :, 0], vmin=0, vmax=1,cmap='gray')
-ax[0,4].set_xticks([])
-ax[0,4].set_yticks([])
-#ax[0,3].axis('off')
-'''
-ax[1,0].set_title('f)   Coarsened to 10 m',loc = 'left')
-#ax[1,0].imshow(inverse_convert(X_resample_2_img[i]))
-ax[1,0].imshow(Y_pred_resample_2[i, :, :, 0], vmin=0, vmax=1,cmap=newcmp)
-ax[1,0].set_xticks([])
-ax[1,0].set_yticks([])
-#ax[1,0].axis('off')
-
-ax[1,1].set_title('g)   Coarsened to 20 m',loc = 'left')
-#ax[1,1].imshow(inverse_convert(X_resample_3_img[i]))
-ax[1,1].imshow(Y_pred_resample_3[i, :, :, 0], vmin=0, vmax=1,cmap=newcmp)
-ax[1,1].set_xticks([])
-ax[1,1].set_yticks([])
-#ax[1,1].axis('off')
-
-ax[1,2].set_title('h)   Coarsened to 30 m',loc = 'left')
-#ax[1,2].imshow(inverse_convert(X_resample_4_img[i]))
-ax[1,2].imshow(Y_pred_resample_4[i, :, :, 0], vmin=0, vmax=1,cmap=newcmp)
-ax[1,2].set_xticks([])
-ax[1,2].set_yticks([])
-#ax[1,2].axis('off')
-
-ax[1,3].set_title('i)   Coarsened to 60 m',loc = 'left')
-#ax[1,3].imshow(inverse_convert(X_resample_5_img[i]))
-ax[1,3].imshow(Y_pred_resample_5[i, :, :, 0], vmin=0, vmax=1,cmap=newcmp)
-ax[1,3].set_xticks([])
-ax[1,3].set_yticks([])
-#ax[1,3].axis('off')
-plt.savefig('AugmentationComparison.png', dpi = 300, transparent = True)
-
-
-import numpy as np
-from sklearn.metrics import confusion_matrix
-
-def plot_confusion_matrix(cm,
-                          target_names,
-                          title='Confusion matrix',
-                          cmap=None,
-                          normalize=True):
-    """
-    given a sklearn confusion matrix (cm), make a nice plot
-
-    Arguments
-    ---------
-    cm:           confusion matrix from sklearn.metrics.confusion_matrix
-
-    target_names: given classification classes such as [0, 1, 2]
-                  the class names, for example: ['high', 'medium', 'low']
-
-    title:        the text to display at the top of the matrix
-
-    cmap:         the gradient of the values displayed from matplotlib.pyplot.cm
-                  see http://matplotlib.org/examples/color/colormaps_reference.html
-                  plt.get_cmap('jet') or plt.cm.Blues
-
-    normalize:    If False, plot the raw numbers
-                  If True, plot the proportions
-
-    Usage
-    -----
-    plot_confusion_matrix(cm           = cm,                  # confusion matrix created by
-                                                              # sklearn.metrics.confusion_matrix
-                          normalize    = True,                # show proportions
-                          target_names = y_labels_vals,       # list of names of the classes
-                          title        = best_estimator_name) # title of graph
-
-    Citiation
-    ---------
-    http://scikit-learn.org/stable/auto_examples/model_selection/plot_confusion_matrix.html
-
-    """
-    import matplotlib.pyplot as plt
-    import numpy as np
-    import itertools
-
-    accuracy = np.trace(cm) / float(np.sum(cm))
-    misclass = 1 - accuracy
-
-    if cmap is None:
-        cmap = plt.get_cmap('Blues')
-
-    plt.figure(figsize=(8, 6))
-    plt.imshow(cm, interpolation='nearest', cmap=cmap)
-    #plt.title('a)')
-    #plt.colorbar()
-
-    if target_names is not None:
-        tick_marks = np.arange(len(target_names))
-        plt.xticks(tick_marks, target_names, rotation=45)
-        plt.yticks(tick_marks, target_names)
-
-    if normalize:
-        cm = cm.astype('float') / cm.sum(axis=1)[:, np.newaxis]
-
-
-    thresh = cm.max() / 1.5 if normalize else cm.max() / 2
-    for i, j in itertools.product(range(cm.shape[0]), range(cm.shape[1])):
-        if normalize:
-            plt.text(j, i, "{:0.3f}".format(cm[i, j]),
-                     horizontalalignment="center",
-                     color="white" if cm[i, j] > thresh else "black")
-        else:
-            plt.text(j, i, "{:,}".format(cm[i, j]),
-                     horizontalalignment="center",
-                     color="white" if cm[i, j] > thresh else "black")
-
-
-    plt.tight_layout()
-    plt.ylabel('True label')
-    plt.xlabel('Predicted label')
-    plt.savefig('confusionMatrix.png', dpi = 300)
-    ##plt.show()
-
-print(Y_test.shape)
-
-ConfusionMat = np.zeros((2,2))
-for x in range(40):
-  conf = confusion_matrix(Y_test[x,:,:,0].ravel(),thresholdArray(Y_pred[x, :, :, 0].ravel()))
-  ConfusionMat = ConfusionMat + conf
-
-print(ConfusionMat)
-
-plt.rcParams.update({'font.size': 20, 'font.family' : "serif"})
-plot_confusion_matrix(cm           = ConfusionMat, 
-                      normalize    = True,
-                      target_names = ['Background','Contour'],
-                      title        = "Confusion Matrix",
-                      cmap = 'Greens')
-

@@ -12,7 +12,7 @@ The `AUC.ipynb` will generate the AUC graphs shown in the paper (figure 6) from 
 ``comparisons.ipynb`` will generate the violin plot from the paper (figure 9) as well as any qualitative comparisons (figures 7 and 8).
 
 ## Environment
-This project utilizes anaconda for its package management.
+This project utilizes anaconda for its package management. If you are unfamiliar with anaconda, you can use this helpful [cheatsheet](https://docs.conda.io/projects/conda/en/4.6.0/_downloads/52a95608c49671267e40c689e0bc00ca/conda-cheatsheet.pdf)
 
 You may rebuild the environment with the following commands
 
