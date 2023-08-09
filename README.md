@@ -5,7 +5,7 @@ This is the code repository for the 2023 paper Dale et. al linked [here](https:/
 Please note that the path to the data (_path_label_ and _path_55_) will need to be changed. 
 
 Inside this repository you will find all of the code needed to generate the results presented in the paper, however, the data used is too large to add to the repository. 
-Thus, you can find it here: https://uark.box.com/s/gdruvmb6ei8dmoyprwn3n6u4h615uvbn
+Thus, you can find it [here](https://doi.org/10.5281/zenodo.8222696)
 
 The primary file of this repository is `train.py`. This contains the code for both model training and sensitivity analysis.
 The `AUC.ipynb` will generate the AUC graphs shown in the paper (figure 6) from the .npy files generated from `train.py`.
